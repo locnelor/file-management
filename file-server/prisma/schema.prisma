@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model sys_folder {
+  id         Int          @id @default(autoincrement())
+  name       String
+  comment    String?      @db.Text
+  parent     sys_folder?  @relation("SysFolderParent", fields: [parentId], references: [id])
+  parentId   Int?
+  children   sys_folder[] @relation("SysFolderParent")
+  visible    Boolean      @default(false)
+  user       sys_user     @relation(fields: [sys_userId], references: [id])
+  sys_userId Int
+  sys_file   sys_file[]
+}
+
+model sys_user {
+  id                Int          @id @default(autoincrement())
+  access_key_id     String       @unique
+  access_key_secret String
+  sys_folder        sys_folder[]
+  is_del            Boolean      @default(false)
+  sys_file          sys_file[]
+  access_ips        String
+}
+
+enum file_status {
+  UPLOADING
+  FINISH
+  ERROR
+}
+
+model sys_file {
+  id           Int         @id @default(autoincrement())
+  createAt     DateTime    @default(now())
+  type         String
+  size         Int
+  status       file_status @default(UPLOADING)
+  hash_key     String      @unique
+  user         sys_user    @relation(fields: [sys_userId], references: [id])
+  sys_userId   Int
+  folder       sys_folder? @relation(fields: [sys_folderId], references: [id])
+  sys_folderId Int?
+  sys_share    sys_share[]
+}
+
+model sys_share {
+  hash_key   String    @id
+  file       sys_file? @relation(fields: [sys_fileId], references: [id])
+  sys_fileId Int?
+  expires DateTime
+}
